@@ -1,108 +1,165 @@
-# DagsHub MCP
+﻿# DagsHub MCP
 
-A local, read-only MCP server for comparing MLflow runs and inspecting result files in DagsHub.
-Your MCP client supplies the AI model; this server retrieves evidence and calculates comparisons.
+Explore your DagsHub experiments with an AI agent. Compare runs, inspect evaluation
+reports, and make model decisions backed by metrics and source references.
 
-## Install in a virtual environment
+DagsHub MCP is a local, read-only [Model Context Protocol](https://modelcontextprotocol.io/)
+server that connects your AI client to DagsHub repositories and their MLflow tracking servers.
+Your client provides the AI model; the server retrieves evidence and calculates comparisons.
 
-Requires Python 3.11+ and [uv](https://docs.astral.sh/uv/). All dependencies are installed into
-this project's `.venv`, not the system Python. Python 3.12 is the tested interpreter.
+> "Compare my latest runs against the baseline for recall, require latency below 100 ms,
+> and recommend the next experiment. Show the evidence and any comparability gaps."
 
-```powershell
+## Features
+
+- **Explore experiments:** search runs and inspect metrics, parameters, tags, and metric history.
+- **Compare results:** calculate baseline differences, rank runs, and check metric thresholds.
+- **Inspect reports:** read JSON, CSV, Markdown, and text from artifacts or repository revisions.
+- **Trace the evidence:** return run references, resolved commit SHAs, and provenance warnings.
+- **Use your preferred agent:** connect through local MCP over stdio, without an LLM API key in the server.
+
+The server analyzes existing results. It does not train models, run new evaluations,
+modify repositories, or deploy models.
+
+## Quick start
+
+### 1. Install
+
+Requires **Python 3.11+**, [uv](https://docs.astral.sh/uv/), and access to a DagsHub repository.
+Python 3.12 is the tested interpreter. For natural-language analysis, use an MCP-compatible
+AI client such as VS Code with GitHub Copilot.
+
+```sh
+git clone https://github.com/InduwaraRathnayake/dagshub-mcp.git
+cd dagshub-mcp
 uv sync --locked --python 3.12
-Copy-Item .env.example .env
-# Edit .env with your own repository allowlist and credentials.
-uv run --locked --env-file .env dagshub-mcp
 ```
 
-The server waits for MCP on stdin/stdout; an idle terminal is expected. Logs go to stderr.
-`.env` is ignored and only loaded when explicitly passed to uv. Never paste tokens into a chat.
-For public repositories, both username and token may be omitted; MLflow access can still require
-repository permissions. Credentialed access uses username/token Basic authentication.
+Dependencies are installed into the project's `.venv`, leaving system Python packages unchanged.
 
-| Variable | Value |
+### 2. Configure DagsHub access
+
+Create a local `.env` from the template:
+
+```powershell
+# Windows PowerShell
+Copy-Item .env.example .env
+```
+
+```sh
+# macOS / Linux
+cp .env.example .env
+```
+
+Edit `.env`:
+
+```dotenv
+DAGSHUB_USERNAME=your-username
+DAGSHUB_TOKEN=your-access-token
+DAGSHUB_REPOSITORIES=owner/repository
+```
+
+| Variable | Where to find it |
 | --- | --- |
 | `DAGSHUB_USERNAME` | Your personal DagsHub username, including when accessing an organization repository. |
-| `DAGSHUB_TOKEN` | An access token from [DagsHub token settings](https://dagshub.com/user/settings/tokens). |
-| `DAGSHUB_REPOSITORIES` | Comma-separated `owner/repository` names taken from your DagsHub repository URLs. |
+| `DAGSHUB_TOKEN` | Generate an access token in [DagsHub token settings](https://dagshub.com/user/settings/tokens). |
+| `DAGSHUB_REPOSITORIES` | The `owner/repository` part of a DagsHub URL. Separate multiple entries with commas. |
 
-## Ask questions in VS Code
+Only repositories in `DAGSHUB_REPOSITORIES` can be accessed. Both credentials may be omitted
+for public access, although experiment tracking can still require repository permissions.
+Authentication uses your username and token through Basic authentication.
 
-The included [.vscode/mcp.json](.vscode/mcp.json) connects this server to VS Code.
-Open this repository as the workspace folder, complete the virtual environment and `.env`
-setup above, and sign in to GitHub Copilot.
+`.env` is ignored by Git. Keep tokens in your local environment and out of chat messages.
 
-1. Run **MCP: List Servers** from the Command Palette (`Ctrl+Shift+P`), select `dagshub`,
-   and start it. Review the server trust prompt if shown.
-2. Open Copilot Chat and select **Agent**.
-3. Enable the DagsHub tools through **Configure Tools** beside the chat input. If your
-   interface has no tool picker, run **Chat: Open Customizations**, select **Tools**,
-   and enable the DagsHub group.
-4. Ask: "Use the DagsHub MCP tools to list experiments in `owner/repository`, then show
-   the latest completed runs and their available metrics."
-5. Follow up: "Compare those runs by `accuracy`, where higher is better. Show run IDs,
-   metric values, parameter differences, and any dataset or split differences."
+### 3. Connect your AI client
 
-Replace the example repository and metric names with your own. Tool calls should appear in
-the chat before the agent explains the results. Copilot supplies the AI model; the MCP
-server needs no additional LLM API key. VS Code starts its own server process, so you do
-not need a separate terminal server or Inspector session running.
+#### VS Code with GitHub Copilot
 
-If DagsHub is missing or fails to start, select **Show Output** for the server and check
-that `uv` is available to VS Code and that `.env` exists in the workspace root.
-See [VS Code MCP configuration](https://code.visualstudio.com/docs/agents/reference/mcp-configuration)
-and [tool availability](https://code.visualstudio.com/docs/agents/run/tools) for client details.
+Open the cloned project folder in VS Code and sign in to GitHub Copilot. The included
+[.vscode/mcp.json](.vscode/mcp.json) uses the workspace location to launch the server and load `.env`.
 
-### Sharing the configuration
+1. Open the Command Palette and run **MCP: List Servers**.
+2. Select **dagshub**, start it, and review any server trust prompt.
+3. Open Copilot Chat and select **Agent**.
+4. Enable DagsHub through **Configure Tools** beside the chat input. If that picker is
+   unavailable, run **Chat: Open Customizations**, select **Tools**, and enable DagsHub.
+5. Ask a question using your configured repository name:
 
-Commit `.vscode/mcp.json`: it uses `${workspaceFolder}` and contains no credentials or
-machine-specific paths. Each contributor creates their own ignored `.env` and local `.venv`.
-Keep real tokens out of `mcp.json`, `.env.example`, and Git history. Commit `.env.example`
-with placeholders and `uv.lock` so others can reproduce the setup.
+   > Use the DagsHub MCP tools to list experiments in `owner/repository`.
+   > Show the latest completed runs and their available metrics.
 
-## Connect any local MCP client
+VS Code starts its own server process. No separate terminal server or Inspector session is needed.
+See the [VS Code MCP reference](https://code.visualstudio.com/docs/agents/reference/mcp-configuration)
+and [tool controls](https://code.visualstudio.com/docs/agents/run/tools) for client-specific details.
 
-Merge this server entry into the configuration format your client supports. Replace the directory
-with this project's absolute path. The `--directory` option ensures `.env` resolves correctly.
+#### Other local MCP clients
+
+For clients using a `mcpServers` configuration, add this entry. Replace the directory with
+an absolute path to your clone; adapt the configuration to your client's schema.
 
 ```json
 {
   "mcpServers": {
     "dagshub": {
       "command": "uv",
-      "args": ["--directory", "C:/absolute/path/dagshub_mcp", "run", "--locked",
-               "--env-file", ".env", "dagshub-mcp"]
+      "args": [
+        "--directory",
+        "/absolute/path/to/dagshub-mcp",
+        "run",
+        "--locked",
+        "--env-file",
+        ".env",
+        "dagshub-mcp"
+      ]
     }
   }
 }
 ```
 
-For an interactive protocol inspection (requires Node.js/npm):
+On Windows, a path such as `C:/Users/you/projects/dagshub-mcp` works without JSON backslash escaping.
+The `--directory` argument ensures the server loads the project's environment and `.env` file.
 
-```powershell
-npx @modelcontextprotocol/inspector uv --directory "C:/absolute/path/dagshub_mcp" run --locked --env-file .env dagshub-mcp
-```
+## Example questions
 
-## Tools
+Replace repository, metric, report, and run names with values from your project.
 
-| Tool | Inputs beyond `repository` | Result |
+> List the experiments in `owner/repository` and summarize the latest completed runs.
+
+> Compare these runs by `accuracy`, where higher is better. Show parameter differences
+> and flag any dataset or split differences before recommending a run.
+
+> Compare run A against baseline B for `recall`, and require `latency_ms <= 100`.
+> Explain whether the improvement meets that constraint.
+
+> Read `reports/evaluation.json` at revision `main` and inspect the selected run's
+> metric history. Summarize the observations and propose the next experiment.
+
+The server also provides an `analyze_experiments` MCP prompt for an evidence-based review.
+Prompt availability and invocation depend on the client.
+
+## Available tools
+
+All tools require an explicit `repository` in `owner/repository` format.
+
+| Tool | Purpose | Main inputs |
 | --- | --- | --- |
-| `list_experiments` | `limit`, `page_token` | Experiment page |
-| `search_runs` | `experiment_ids`, optional MLflow `filter_string`, `order_by`, pagination | Run page |
-| `get_run` | `run_id` | Latest metrics with step/timestamp, params, tags, dataset inputs |
-| `get_metric_history` | `run_id`, `metric`, pagination | Metric-history page |
-| `list_artifacts` | `run_id`, optional directory `path`, pagination | Artifact entries |
-| `read_artifact` | `run_id`, `path` | Bounded report preview |
-| `list_repo_files` | `revision`, optional directory `path`, pagination | File entries and resolved commit |
-| `read_repo_file` | `revision`, `path` | Report preview pinned to a resolved commit |
-| `compare_runs` | `run_ids`, `baseline_run_id`, `metric`, `direction`, optional `thresholds` | Differences, ranks, eligibility, provenance warnings |
+| `list_experiments` | Discover active MLflow experiments | Pagination |
+| `search_runs` | Find active runs using MLflow filters and sorting | `experiment_ids`, `filter_string`, `order_by`, pagination |
+| `get_run` | Inspect metrics with steps/timestamps, params, tags, and dataset inputs | `run_id` |
+| `get_metric_history` | Read a metric's logged history | `run_id`, `metric`, pagination |
+| `list_artifacts` | Browse an artifact directory | `run_id`, `path`, pagination |
+| `read_artifact` | Preview an evaluation artifact | `run_id`, `path` |
+| `list_repo_files` | Browse versioned repository files | `revision`, `path`, pagination |
+| `read_repo_file` | Preview a report at a resolved commit | `revision`, `path` |
+| `compare_runs` | Calculate differences, ranks, and threshold results | `run_ids`, `baseline_run_id`, `metric`, `direction`, `thresholds` |
 
-Every repository must be listed in `DAGSHUB_REPOSITORIES` (comma-separated `owner/repo` names).
-Page limits are 1–100. Follow `next_page_token`; inspect `truncated` and `warnings`.
-Repository listings use local pagination over one bounded upstream directory response. Reuse
-the returned commit SHA for subsequent pages so branch changes do not mix revisions.
+Page sizes range from 1 to 100. Follow `next_page_token` and inspect `warnings` and `truncated`.
+Reuse returned commit SHAs for repository reads and subsequent pages to keep revisions consistent.
 
-Example `compare_runs` arguments (replace the run IDs):
+### Comparison behavior
+
+`compare_runs` accepts 2-20 distinct runs from one repository, including the selected baseline.
+Specify `maximize` or `minimize` for the objective metric. For example:
 
 ```json
 {
@@ -111,57 +168,96 @@ Example `compare_runs` arguments (replace the run IDs):
   "baseline_run_id": "baseline-run-id",
   "metric": "recall",
   "direction": "maximize",
-  "thresholds": [{"metric": "latency_ms", "operator": "<=", "value": 100}]
+  "thresholds": [
+    {"metric": "latency_ms", "operator": "<=", "value": 100}
+  ]
 }
 ```
 
-Changes are signed `candidate - baseline`, with percentage change divided by `abs(baseline)`.
-Zero baselines have no percentage change. Ranks use only the objective metric; eligibility is
-reported separately. Ties share a dense rank. Missing/non-finite values remain missing;
-missing objective/threshold metrics make a run unevaluable. Latest logged metrics can come from
-different training steps. The server reports provenance differences and gaps rather than assuming
-all runs used equivalent data. No significance or causal claims are calculated.
+- Changes are signed `candidate - baseline`; percentage change divides by `abs(baseline)`.
+  A zero baseline has no percentage change.
+- Ranks use the objective metric, independently of threshold eligibility. Ties share a dense rank.
+- Missing or non-finite objective/threshold values make a run unevaluable.
+- Comparisons use the latest logged values, which may come from different training steps.
+- Missing or differing dataset, split, and code provenance produces warnings. Summary metrics
+  alone do not establish statistical significance or causation.
 
-The `analyze_experiments` MCP prompt guides the agent through evidence gathering and recommendations.
-Try: "Compare my latest runs against the baseline for recall, require latency <= 100 ms,
-inspect reports/evaluation.json, and recommend a next experiment with supporting evidence."
+## Supported data and limitations
 
-## File and storage support
+| Area | Current support |
+| --- | --- |
+| Transport | Local stdio MCP |
+| Report formats | UTF-8 `.json`, `.csv`, `.md`, `.txt` |
+| File reads | At most 1 MiB per file |
+| Previews | Up to 20,000 text characters or 100 CSV rows, including a header if present |
+| Repository data | Git/DVC content at a branch, tag, or commit resolved to a full SHA |
+| Artifact storage | `mlflow-artifacts:/...` and DagsHub HTTPS roots scoped to the selected repository |
 
-UTF-8 `.json`, `.csv`, `.md`, and `.txt` files only. Reads stop at 1 MiB; previews cap text at
-20,000 characters and CSV at 100 rows (including a header, if present). Large JSON previews are
-text excerpts, not complete JSON objects. Files, tags, and parameters are untrusted data.
+External S3/GCS/local artifact locations, signed URLs, redirected downloads, and Data Engine
+browsing are unsupported. Large JSON previews are text excerpts rather than complete JSON objects.
+No repository code or serialized model is executed. Retrieved content is treated as untrusted data.
 
-Artifact reads support `mlflow-artifacts:/...` and DagsHub-hosted HTTPS roots scoped to the
-selected repository. External S3/GCS/local artifacts, signed URLs, and redirected downloads return
-explicit errors. No executable reports or serialized models are loaded. Repository content APIs
-cover Git/DVC files; this version does not browse Data Engine or arbitrary external buckets.
+Requests have timeouts and response-size bounds. Transient service failures and rate limits are
+retried within a fixed attempt limit. Credentials are not forwarded through redirects.
 
-HTTP requests use timeouts and bounded responses, retry transient service failures/rate limits,
-and do not forward credentials through redirects. API response bodies and credentials are not
-included in error messages. The server exposes no generic HTTP, shell, write, or deployment tool.
+## Troubleshooting
 
-## Verification
+| Symptom | What to check |
+| --- | --- |
+| Terminal appears idle | Expected: stdio waits for an MCP client. It is not an interactive chat. |
+| VS Code cannot find `uv` | Make `uv` available on its PATH, or configure the executable's absolute path. |
+| Server fails at startup | Check `.env`, the repository allowlist, and that both username/token are set together. |
+| DagsHub tools are missing | Start the server, enable its tools in chat, and inspect **Show Output** for errors. |
+| Authentication error | Check the token, personal username, and access to the selected repository. |
+| Repository not allowed | Add the exact `owner/repository` to `.env`, then restart the server. |
+| Empty experiment list | Confirm the repository contains MLflow experiments and your account can access them. |
+| Unsupported storage or large report | Check the supported formats, artifact locations, and size limits above. |
 
-```powershell
+To inspect individual tools, run this from the project root (requires Node.js/npm):
+
+```sh
+npx @modelcontextprotocol/inspector uv run --locked --env-file .env dagshub-mcp
+```
+
+Open the URL printed in the terminal, connect, and call `list_experiments` with your repository.
+
+## Development and testing
+
+```sh
+uv sync --locked --python 3.12
 uv run --locked pytest
 uv run --locked ruff check .
+uv run --locked ruff format --check src tests
 ```
 
-Offline tests cover comparisons, adapters, report bounds, authentication failures, retries,
-and MCP discovery/calls. An SDK stdio test exercises the actual process entry point.
-For an opt-in live read of one configured repository:
+The default suite uses fixtures and mocked APIs. It covers comparison calculations, report
+bounds, authentication failures, pagination, retries, MCP discovery, and a real stdio subprocess.
+
+Live tests are opt-in and read from the first configured repository in alphabetical order:
 
 ```powershell
+# Windows PowerShell
 $env:DAGSHUB_LIVE_TEST = "1"
-uv run --locked --env-file .env pytest -m live
+uv run --locked --env-file .env pytest -m live -v
+Remove-Item Env:DAGSHUB_LIVE_TEST
 ```
 
-The live test resolves the default branch, lists files and experiments, and inspects a run if
-available. It never writes. Real report/artifact validation additionally requires representative
-paths/run IDs from your repository; offline fixtures cannot establish live storage compatibility.
+```sh
+# macOS / Linux
+DAGSHUB_LIVE_TEST=1 uv run --locked --env-file .env pytest -m live -v
+```
 
-Implementation references: [DagsHub API](https://dagshub.com/docs/api/),
-[DagsHub OpenAPI](https://github.com/DagsHub/openapi-description),
-[MLflow REST](https://mlflow.org/docs/latest/api_reference/rest-api.html),
-[MCP Python SDK](https://py.sdk.modelcontextprotocol.io/).
+The live test lists repository files and experiments, then inspects a run if available.
+It does not validate every report or artifact storage configuration.
+
+API adapters, deterministic analysis, and MCP tool registration are separated under
+[`src/dagshub_mcp`](src/dagshub_mcp). Contributions should include relevant tests and pass
+the checks above. When reporting an issue, include reproduction steps and sanitized error
+output; omit credentials and private experiment data.
+
+## References
+
+- [DagsHub API documentation](https://dagshub.com/docs/api/)
+- [DagsHub OpenAPI specification](https://github.com/DagsHub/openapi-description)
+- [MLflow REST API](https://mlflow.org/docs/latest/api_reference/rest-api.html)
+- [MCP Python SDK](https://py.sdk.modelcontextprotocol.io/)
