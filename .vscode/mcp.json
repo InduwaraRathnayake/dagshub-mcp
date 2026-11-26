@@ -1,0 +1,17 @@
+{
+  "servers": {
+    "dagshub": {
+      "type": "stdio",
+      "command": "uv",
+      "args": [
+        "--directory",
+        "${workspaceFolder}",
+        "run",
+        "--locked",
+        "--env-file",
+        ".env",
+        "dagshub-mcp"
+      ]
+    }
+  }
+}

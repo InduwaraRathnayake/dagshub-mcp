@@ -12,13 +12,53 @@ this project's `.venv`, not the system Python. Python 3.12 is the tested interpr
 uv sync --locked --python 3.12
 Copy-Item .env.example .env
 # Edit .env with your own repository allowlist and credentials.
-uv run --env-file .env dagshub-mcp
+uv run --locked --env-file .env dagshub-mcp
 ```
 
 The server waits for MCP on stdin/stdout; an idle terminal is expected. Logs go to stderr.
 `.env` is ignored and only loaded when explicitly passed to uv. Never paste tokens into a chat.
 For public repositories, both username and token may be omitted; MLflow access can still require
 repository permissions. Credentialed access uses username/token Basic authentication.
+
+| Variable | Value |
+| --- | --- |
+| `DAGSHUB_USERNAME` | Your personal DagsHub username, including when accessing an organization repository. |
+| `DAGSHUB_TOKEN` | An access token from [DagsHub token settings](https://dagshub.com/user/settings/tokens). |
+| `DAGSHUB_REPOSITORIES` | Comma-separated `owner/repository` names taken from your DagsHub repository URLs. |
+
+## Ask questions in VS Code
+
+The included [.vscode/mcp.json](.vscode/mcp.json) connects this server to VS Code.
+Open this repository as the workspace folder, complete the virtual environment and `.env`
+setup above, and sign in to GitHub Copilot.
+
+1. Run **MCP: List Servers** from the Command Palette (`Ctrl+Shift+P`), select `dagshub`,
+   and start it. Review the server trust prompt if shown.
+2. Open Copilot Chat and select **Agent**.
+3. Enable the DagsHub tools through **Configure Tools** beside the chat input. If your
+   interface has no tool picker, run **Chat: Open Customizations**, select **Tools**,
+   and enable the DagsHub group.
+4. Ask: "Use the DagsHub MCP tools to list experiments in `owner/repository`, then show
+   the latest completed runs and their available metrics."
+5. Follow up: "Compare those runs by `accuracy`, where higher is better. Show run IDs,
+   metric values, parameter differences, and any dataset or split differences."
+
+Replace the example repository and metric names with your own. Tool calls should appear in
+the chat before the agent explains the results. Copilot supplies the AI model; the MCP
+server needs no additional LLM API key. VS Code starts its own server process, so you do
+not need a separate terminal server or Inspector session running.
+
+If DagsHub is missing or fails to start, select **Show Output** for the server and check
+that `uv` is available to VS Code and that `.env` exists in the workspace root.
+See [VS Code MCP configuration](https://code.visualstudio.com/docs/agents/reference/mcp-configuration)
+and [tool availability](https://code.visualstudio.com/docs/agents/run/tools) for client details.
+
+### Sharing the configuration
+
+Commit `.vscode/mcp.json`: it uses `${workspaceFolder}` and contains no credentials or
+machine-specific paths. Each contributor creates their own ignored `.env` and local `.venv`.
+Keep real tokens out of `mcp.json`, `.env.example`, and Git history. Commit `.env.example`
+with placeholders and `uv.lock` so others can reproduce the setup.
 
 ## Connect any local MCP client
 
