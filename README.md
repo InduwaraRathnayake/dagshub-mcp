@@ -255,6 +255,12 @@ API adapters, deterministic analysis, and MCP tool registration are separated un
 the checks above. When reporting an issue, include reproduction steps and sanitized error
 output; omit credentials and private experiment data.
 
+## License
+
+Copyright 2026 Induwara Rathnayake.
+
+Licensed under the [Apache License, Version 2.0](LICENSE).
+
 ## References
 
 - [DagsHub API documentation](https://dagshub.com/docs/api/)
