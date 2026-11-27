@@ -56,6 +56,23 @@ async def test_revision_pinned_files_and_paging(settings):
     await transport.close()
 
 
+async def test_file_listing_does_not_require_optional_size_calculation(settings):
+    def handler(request):
+        if request.url.path.endswith("/commits"):
+            return httpx.Response(200, json=[{"id": SHA}])
+        assert request.url.path == f"/api/v1/repos/owner/repo/content/{SHA}/"
+        if request.url.params.get("include_size") != "false":
+            return httpx.Response(500)
+        return httpx.Response(200, json=[{"path": "report.json", "type": "file"}])
+
+    transport = mock_transport(settings, handler)
+    result = await DagsHubAPI(settings, transport).list_files("owner/repo", "main", "", 10, None)
+    assert result.items == [{"path": "report.json", "type": "file"}]
+    assert result.revision == SHA
+    assert any("sizes may be unavailable" in warning for warning in result.warnings)
+    await transport.close()
+
+
 @pytest.mark.parametrize(
     "status,code",
     [

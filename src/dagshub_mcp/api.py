@@ -173,7 +173,8 @@ class DagsHubAPI:
         relative_path(path, allow_empty=True)
         sha = await self.revision(repo, ref)
         url = f"{self.base(repo)}/content/{sha}/{qp(path)}"
-        entries = await self.http.json("GET", url, params={"include_size": "true"})
+        # Optional size calculation can fail for otherwise readable Git/DVC listings.
+        entries = await self.http.json("GET", url, params={"include_size": "false"})
         if isinstance(entries, dict):
             entries = [entries]
         if not isinstance(entries, list):
@@ -201,7 +202,8 @@ class DagsHubAPI:
             items=items,
             next_page_token=json.dumps([sha, path, end]) if end < len(entries) else None,
             warnings=[
-                "Listing includes versioned Git/DVC entries; file hashes identify their content."
+                "Listing includes versioned Git/DVC entries; file hashes identify their content.",
+                "File sizes may be unavailable; optional size calculation is disabled.",
             ],
         )
 
